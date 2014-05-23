@@ -4,6 +4,7 @@ import Web.Scotty
 import Control.Monad.IO.Class
 import Control.Monad(join)
 import Control.Applicative((<$>))
+import Control.Concurrent(forkIO)
 import Data.Traversable(traverse)
 import Data.List(intercalate)
 
@@ -15,16 +16,17 @@ import Network.Wai.Parse
 import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text.Lazy as T
-import Data.Aeson(FromJSON,eitherDecode,decode,object,(.=)) --JSON
-import qualified Data.HashMap.Strict as HM
+import Data.Aeson(FromJSON,eitherDecode,object,(.=)) --JSON
 
 import System.FilePath((</>))
 import System.Random(newStdGen, randomRs)
 import System.Directory(createDirectoryIfMissing)
-import System.Process(readProcessWithExitCode)
+import System.Process(readProcessWithExitCode, readProcess)
 import Data.String.Utils(replace)
 import Data.List.Split(splitOn)
+import Data.Map.Strict(Map, (!), fromList)
 import GHC.Generics
+
 
 data Config = Config { host :: String, port :: Int } deriving (Show, Generic)
 instance FromJSON Config
@@ -35,6 +37,12 @@ getCorsPolicy = const $ Just (CorsResourcePolicy { corsMethods=["GET", "PUT", "P
 fileToTuple :: forall t t1. (t, FileInfo t1) -> ([Char], t1)
 fileToTuple (_, fi) = (BS.unpack (fileName fi), fileContent fi)
 
+preset_map :: Map String (String, String)
+preset_map = fromList [("h264", ("-vcodec,libx264,-preset,fast,-crf,22", ".mp4")), ("ogg", ("-c:v,libtheora,-c:a,libvorbis,-q:v,10,-q:a,10", ".ogv"))]
+
+getPresent :: String -> (String, String)
+getPresent x = preset_map ! x
+
 insertFile :: FilePath -> String -> FilePath
 insertFile path x = fn ++ x ++ ext
   where (fn, ext) = break (=='.') $ path
@@ -42,15 +50,29 @@ insertFile path x = fn ++ x ++ ext
 getPathName :: FilePath -> IO FilePath
 getPathName path = fmap ((insertFile path) . take 4 . randomRs ('a','z')) $ newStdGen
 
-makeImArgs :: FilePath -> FilePath -> String -> [String]
-makeImArgs path path_name command = ([path]++cmds++[path_name])
+getMovPathName :: FilePath -> String -> FilePath
+getMovPathName path x = replace ext x path
+  where (_, ext) = break (=='.') $ path
+
+makeArgs :: FilePath -> FilePath -> String -> [String]
+makeArgs input_file output_file command = ([input_file]++cmds++[output_file])
   where cmds = splitOn "," command
 
 cropImage :: String -> FilePath -> IO FilePath
-cropImage command path = do
-  path_name <- getPathName path
-  _ <- readProcessWithExitCode "convert" (makeImArgs path path_name command) ""
-  return path_name
+cropImage command input_file = do
+  output_file <- getPathName input_file
+  _ <- readProcessWithExitCode "convert" (makeArgs input_file output_file command) ""
+  return output_file
+
+compressVideo :: FilePath -> String -> IO FilePath
+compressVideo input_file format = do
+  let (cmd, ext) = getPresent format
+  let output_file = getMovPathName input_file ext
+  _ <- forkIO $ mapM_ (\x -> readProcess "ffmpeg" x "") $ [makeArgs "-i" output_file (input_file++","++cmd)]
+  return input_file
+
+compressVideos :: String -> FilePath -> IO FilePath
+compressVideos command input_file = ((mapM_ (compressVideo input_file)) . splitOn "," $ command) >> (return input_file)
 
 generateFolder :: IO FilePath
 generateFolder = do
@@ -70,14 +92,12 @@ addHost cfg x = (host cfg) ++ ":" ++ (show.port $ cfg) ++ (replace "uploads" "" 
 removeHost :: Config -> String -> String
 removeHost cfg x = replace ((host cfg) ++ ":" ++ (show.port $ cfg)) "uploads" x
 
-getConfig :: IO B.ByteString
-getConfig = B.readFile "config.json"
+getConfig :: IO (Either String Config)
+getConfig = eitherDecode <$> B.readFile "config.json"
 
-main = do
- d <- (eitherDecode <$> getConfig) :: IO (Either String Config)
- case d of
-   Left err -> putStrLn err
-   Right cfg -> scotty (port cfg) $ do
+startApp :: Config -> IO ()
+startApp cfg = do
+   scotty (port cfg) $ do
       middleware logStdoutDev
       middleware $ staticPolicy (addBase "uploads")
       middleware $ cors getCorsPolicy
@@ -92,4 +112,13 @@ main = do
         url <- param "url"
         res <- liftIO $ cropImage command (removeHost cfg url)
         json $ object ["success" .= True, "url" .= ((addHost cfg) res) ]
+
+      get "/compress" $ do
+        command <- param "command"
+        url <- param "url"
+        res <- liftIO $ compressVideos command (removeHost cfg url)
+        json $ object ["success" .= True, "url" .= ((addHost cfg) res) ]
+
+main :: IO()
+main = join . fmap (either putStrLn startApp) $ getConfig
 

@@ -40,5 +40,6 @@ executable todo
                      , MissingH
                      , split
                      , directory
+                     , containers
   ghc-options:       -Wall -O2
 
