@@ -10,7 +10,7 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 executable todo
-  main-is:             Main.hs
+  main-is:             main.hs
   -- other-modules:       
   build-depends:       base ==4.7.*
                      , wai
