@@ -8,10 +8,12 @@ import Control.Concurrent(forkIO)
 import Data.Traversable(traverse)
 import Data.List(intercalate)
 
+import Network.Wai (Application, Request(..), Response, responseLBS)
 import Network.Wai.Middleware.RequestLogger
 import Network.Wai.Middleware.Static
 import Network.Wai.Middleware.Cors
 import Network.Wai.Parse
+import Network.HTTP.Types (status401)
 
 import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Char8 as BS
@@ -27,8 +29,7 @@ import Data.List.Split(splitOn)
 import Data.Map.Strict(Map, (!), fromList)
 import GHC.Generics
 
-
-data Config = Config { host :: String, port :: Int } deriving (Show, Generic)
+data Config = Config { host :: String, port :: Int, key :: String } deriving (Show, Generic)
 instance FromJSON Config
 
 getCorsPolicy :: a -> Maybe CorsResourcePolicy
@@ -95,10 +96,18 @@ removeHost cfg x = replace ((host cfg) ++ ":" ++ (show.port $ cfg)) "uploads" x
 getConfig :: IO (Either String Config)
 getConfig = eitherDecode <$> B.readFile "config.json"
 
+checkKey :: String -> Request -> Bool
+checkKey k req = maybe False (== k) reqKey
+  where reqKey = fmap BS.unpack $ lookup "Authorization" (requestHeaders req)
+
+keyAuth :: String -> Application -> Request -> IO Response
+keyAuth k app req = if checkKey k req then app req else return $ responseLBS status401 [] ""
+
 startApp :: Config -> IO ()
 startApp cfg = do
    scotty (port cfg) $ do
       middleware logStdoutDev
+      middleware $ keyAuth (key cfg)
       middleware $ staticPolicy (addBase "uploads")
       middleware $ cors getCorsPolicy
 
@@ -121,4 +130,3 @@ startApp cfg = do
 
 main :: IO()
 main = join . fmap (either putStrLn startApp) $ getConfig
-
