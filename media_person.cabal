@@ -11,8 +11,8 @@ cabal-version:       >=1.8
 
 executable todo
   main-is:             main.hs
-  -- other-modules:       
-  build-depends:       base ==4.7.*
+  -- other-modules:
+  build-depends:       base >=4.6.0.1
                      , wai
                      , warp
                      , http-types
