@@ -13,7 +13,7 @@ import Network.Wai.Middleware.RequestLogger
 import Network.Wai.Middleware.Static
 import Network.Wai.Middleware.Cors
 import Network.Wai.Parse
-import Network.HTTP.Types (status401)
+import Network.HTTP.Types (status401, methodOptions)
 
 import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Char8 as BS
@@ -33,7 +33,7 @@ data Config = Config { host :: String, port :: Int, key :: String } deriving (Sh
 instance FromJSON Config
 
 getCorsPolicy :: a -> Maybe CorsResourcePolicy
-getCorsPolicy = const $ Just (CorsResourcePolicy { corsMethods=["GET", "PUT", "POST"], corsOrigins=Nothing, corsRequestHeaders=["x-requested-with", "content-type", "cache-control"], corsExposedHeaders=(Just ["Access-Control-Allow-Origin"]), corsMaxAge=(Just 1000), corsVaryOrigin=True, corsVerboseResponse=True  })
+getCorsPolicy = const $ Just (CorsResourcePolicy { corsMethods=["GET", "PUT", "POST"], corsOrigins=Nothing, corsRequestHeaders=["x-requested-with", "content-type", "cache-control", "Authorization"], corsExposedHeaders=(Just ["Access-Control-Allow-Origin"]), corsMaxAge=(Just 1000), corsVaryOrigin=True, corsVerboseResponse=True  })
 
 fileToTuple :: forall t t1. (t, FileInfo t1) -> ([Char], t1)
 fileToTuple (_, fi) = (BS.unpack (fileName fi), fileContent fi)
@@ -101,7 +101,7 @@ checkKey k req = maybe False (== k) reqKey
   where reqKey = fmap BS.unpack $ lookup "Authorization" (requestHeaders req)
 
 keyAuth :: String -> Application -> Request -> IO Response
-keyAuth k app req = if checkKey k req then app req else return $ responseLBS status401 [] ""
+keyAuth k app req = if ((requestMethod req) == methodOptions) || checkKey k req then app req else return $ responseLBS status401 [] ""
 
 startApp :: Config -> IO ()
 startApp cfg = do
