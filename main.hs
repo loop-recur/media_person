@@ -107,8 +107,8 @@ startApp :: Config -> IO ()
 startApp cfg = do
    scotty (port cfg) $ do
       middleware logStdoutDev
-      middleware $ keyAuth (key cfg)
       middleware $ staticPolicy (addBase "uploads")
+      middleware $ keyAuth (key cfg)
       middleware $ cors getCorsPolicy
 
       post "/upload" $ do
