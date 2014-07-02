@@ -69,7 +69,6 @@ getScreenshot :: FilePath -> IO FilePath
 getScreenshot input_file = do
   let output_file = getMovPathName input_file ".jpg"
   let args = (makeArgs "-i" output_file (input_file++",-vframes,1,-f,image2,-an"))
-  _ <- liftIO $ print (show args)
   _ <- readProcessWithExitCode "ffmpeg" args ""
   return output_file
 
