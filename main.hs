@@ -65,6 +65,14 @@ cropImage command input_file = do
   _ <- readProcessWithExitCode "convert" (makeArgs input_file output_file command) ""
   return output_file
 
+getScreenshot :: FilePath -> IO FilePath
+getScreenshot input_file = do
+  let output_file = getMovPathName input_file ".jpg"
+  let args = (makeArgs "-i" output_file (input_file++",-vframes,1,-f,image2,-an"))
+  _ <- liftIO $ print (show args)
+  _ <- readProcessWithExitCode "ffmpeg" args ""
+  return output_file
+
 compressVideo :: FilePath -> String -> IO FilePath
 compressVideo input_file format = do
   let (cmd, ext) = getPresent format
@@ -73,7 +81,10 @@ compressVideo input_file format = do
   return input_file
 
 compressVideos :: String -> FilePath -> IO FilePath
-compressVideos command input_file = ((mapM_ (compressVideo input_file)) . splitOn "," $ command) >> (return input_file)
+compressVideos command input_file = do
+  screenshot <- getScreenshot input_file
+  _ <- ((mapM_ (compressVideo input_file)) . splitOn "," $ command)
+  return screenshot
 
 generateFolder :: IO FilePath
 generateFolder = do
@@ -108,7 +119,7 @@ startApp cfg = do
    scotty (port cfg) $ do
       middleware logStdoutDev
       middleware $ staticPolicy (addBase "uploads")
-      middleware $ keyAuth (key cfg)
+--      middleware $ keyAuth (key cfg)
       middleware $ cors getCorsPolicy
 
       post "/upload" $ do
