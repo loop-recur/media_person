@@ -20,7 +20,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text.Lazy as T
 import Data.Aeson(FromJSON,eitherDecode,object,(.=)) --JSON
 
-import System.FilePath((</>))
+import System.FilePath((</>), takeExtension)
 import System.Random(newStdGen, randomRs)
 import System.Directory(createDirectoryIfMissing)
 import System.Process(readProcessWithExitCode, readProcess)
@@ -43,6 +43,9 @@ preset_map = fromList [("h264", ("-vcodec,libx264,-preset,fast,-crf,22", ".mp4")
 
 getPresent :: String -> (String, String)
 getPresent x = preset_map ! x
+
+video_extensions :: [String]
+video_extensions = [".avi", ".wmv", ".flv", ".mpg", ".mpeg", ".mp4", ".mov", ".m4v"]
 
 insertFile :: FilePath -> String -> FilePath
 insertFile path x = fn ++ x ++ ext
@@ -80,10 +83,7 @@ compressVideo input_file format = do
   return input_file
 
 compressVideos :: String -> FilePath -> IO FilePath
-compressVideos command input_file = do
-  screenshot <- getScreenshot input_file
-  _ <- ((mapM_ (compressVideo input_file)) . splitOn "," $ command)
-  return screenshot
+compressVideos command input_file = ((mapM_ (compressVideo input_file)) . splitOn "," $ command) >> (return input_file)
 
 generateFolder :: IO FilePath
 generateFolder = do
@@ -91,11 +91,14 @@ generateFolder = do
   createDirectoryIfMissing True folder
   return folder
 
+isVideo :: FilePath -> Bool
+isVideo = ((flip elem) video_extensions) . takeExtension
+
 saveFile :: (FilePath, B.ByteString) -> IO FilePath
 saveFile (fn, fc) = do
   folder <- fmap (</>fn) $ generateFolder
   _ <- B.writeFile folder fc
-  return folder
+  if (isVideo fn) then (getScreenshot folder) else (return folder)
 
 addHost :: Config -> String -> String
 addHost cfg x = (host cfg) ++ ":" ++ (show.port $ cfg) ++ (replace "uploads" "" x)
