@@ -18,7 +18,8 @@ import Network.HTTP.Types (status401, methodOptions)
 import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text.Lazy as T
-import Data.Aeson(FromJSON,eitherDecode,object,(.=)) --JSON
+import Data.Text.Lazy.Encoding (decodeUtf8)
+import Data.Aeson(FromJSON,eitherDecode, encode, object,(.=)) --JSON
 
 import System.FilePath((</>), takeExtension)
 import System.Random(newStdGen, randomRs)
@@ -131,7 +132,7 @@ startApp cfg = do
       post "/upload" $ do
         xs <- traverse (liftIO . (saveFile . fileToTuple)) =<< files
         let res = T.pack . intercalate [','] . (map (addHost cfg)) $ xs
-        json $ object ["success" .= True, "url" .= res ]
+        text $ (decodeUtf8 . encode . object) ["success" .= True, "url" .= res ]
 
       get "/crop" $ do
         command <- param "command"
