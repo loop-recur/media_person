@@ -33,9 +33,9 @@ data Config = Config { host :: String, port :: Int, key :: String } deriving (Sh
 instance FromJSON Config
 
 getCorsPolicy ::  Request -> Maybe CorsResourcePolicy
-getCorsPolicy req
-    | Just origin <- hdrOrigin = Just (CorsResourcePolicy { corsMethods=["GET", "PUT", "POST"], corsOrigins=Nothing, corsRequestHeaders=["x-requested-with", "content-type", "cache-control", "Authorization"], corsExposedHeaders=(Just ["Access-Control-Allow-Origin"]), corsMaxAge=(Just 1000), corsVaryOrigin=True, corsVerboseResponse=True  })
-    | otherwise = Nothing
+getCorsPolicy req = case hdrOrigin of
+    Just origin -> Just (CorsResourcePolicy { corsMethods=["GET", "PUT", "POST"], corsOrigins=Nothing, corsRequestHeaders=["x-requested-with", "content-type", "cache-control", "Authorization"], corsExposedHeaders=(Just ["Access-Control-Allow-Origin"]), corsMaxAge=(Just 1000), corsVaryOrigin=True, corsVerboseResponse=True  })
+    _ -> Nothing
   where
     hdrOrigin = lookup "origin" (requestHeaders req)
 
