@@ -32,8 +32,12 @@ import GHC.Generics
 data Config = Config { host :: String, port :: Int, key :: String } deriving (Show, Generic)
 instance FromJSON Config
 
-getCorsPolicy :: a -> Maybe CorsResourcePolicy
-getCorsPolicy = const $ Just (CorsResourcePolicy { corsMethods=["GET", "PUT", "POST"], corsOrigins=Nothing, corsRequestHeaders=["x-requested-with", "content-type", "cache-control", "Authorization"], corsExposedHeaders=(Just ["Access-Control-Allow-Origin"]), corsMaxAge=(Just 1000), corsVaryOrigin=True, corsVerboseResponse=True  })
+getCorsPolicy ::  Request -> Maybe CorsResourcePolicy
+getCorsPolicy req
+    | Just origin <- hdrOrigin = Just (CorsResourcePolicy { corsMethods=["GET", "PUT", "POST"], corsOrigins=Nothing, corsRequestHeaders=["x-requested-with", "content-type", "cache-control", "Authorization"], corsExposedHeaders=(Just ["Access-Control-Allow-Origin"]), corsMaxAge=(Just 1000), corsVaryOrigin=True, corsVerboseResponse=True  })
+    | otherwise = Nothing
+  where
+    hdrOrigin = lookup "origin" (requestHeaders req)
 
 fileToTuple :: forall t t1. (t, FileInfo t1) -> ([Char], t1)
 fileToTuple (_, fi) = (BS.unpack (fileName fi), fileContent fi)
