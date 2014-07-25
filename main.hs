@@ -131,19 +131,24 @@ startApp cfg = do
       post "/upload" $ do
         xs <- traverse (liftIO . (saveFile . fileToTuple)) =<< files
         let res = T.pack . intercalate [','] . (map (addHost cfg)) $ xs
+        setHeader "Location" res
         json $ object ["success" .= True, "url" .= res ]
 
       get "/crop" $ do
         command <- param "command"
         url <- param "url"
         res <- liftIO $ cropImage command (removeHost cfg url)
-        json $ object ["success" .= True, "url" .= ((addHost cfg) res) ]
+        let newUrl = addHost cfg res
+        setHeader "Location" (T.pack newUrl)
+        json $ object ["success" .= True, "url" .= newUrl ]
 
       get "/compress" $ do
         command <- param "command"
         url <- param "url"
         res <- liftIO $ compressVideos command (removeHost cfg url)
-        json $ object ["success" .= True, "url" .= ((addHost cfg) res) ]
+        let newUrl = addHost cfg res
+        setHeader "Location" (T.pack newUrl)
+        json $ object ["success" .= True, "url" .= newUrl ]
 
 main :: IO()
 main = join . fmap (either putStrLn startApp) $ getConfig
