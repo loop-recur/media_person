@@ -134,7 +134,7 @@ startApp cfg = do
         setHeader "Location" res
         json $ object ["success" .= True, "url" .= res ]
 
-      get "/crop" $ do
+      post "/crop" $ do
         command <- param "command"
         url <- param "url"
         res <- liftIO $ cropImage command (removeHost cfg url)
@@ -142,7 +142,7 @@ startApp cfg = do
         setHeader "Location" (T.pack newUrl)
         json $ object ["success" .= True, "url" .= newUrl ]
 
-      get "/compress" $ do
+      post "/compress" $ do
         command <- param "command"
         url <- param "url"
         res <- liftIO $ compressVideos command (removeHost cfg url)
