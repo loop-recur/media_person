@@ -8,12 +8,11 @@ import Control.Concurrent(forkIO)
 import Data.Traversable(traverse)
 import Data.List(intercalate)
 
-import Network.Wai (Application, Request(..), Response, responseLBS)
 import Network.Wai.Middleware.RequestLogger
 import Network.Wai.Middleware.Static
 import Network.Wai.Middleware.Cors
 import Network.Wai.Parse
-import Network.HTTP.Types (status401, methodOptions)
+import Network.Wai (Request(..), requestHeaders)
 
 import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Char8 as BS
@@ -29,12 +28,12 @@ import Data.List.Split(splitOn)
 import Data.Map.Strict(Map, (!), fromList)
 import GHC.Generics
 
-data Config = Config { host :: String, port :: Int, key :: String } deriving (Show, Generic)
+data Config = Config { host :: String, port :: Int } deriving (Show, Generic)
 instance FromJSON Config
 
-getCorsPolicy ::  Request -> Maybe CorsResourcePolicy
+getCorsPolicy :: Request -> Maybe CorsResourcePolicy
 getCorsPolicy req = case hdrOrigin of
-    Just origin -> Just (CorsResourcePolicy { corsMethods=["GET", "PUT", "POST"], corsOrigins=Nothing, corsRequestHeaders=["x-requested-with", "content-type", "cache-control", "Authorization"], corsExposedHeaders=(Just ["Access-Control-Allow-Origin"]), corsMaxAge=(Just 1000), corsVaryOrigin=True, corsVerboseResponse=True  })
+    Just _ -> Just (CorsResourcePolicy { corsMethods=["GET", "PUT", "POST"], corsOrigins=Nothing, corsRequestHeaders=["x-requested-with", "content-type", "cache-control", "Authorization"], corsExposedHeaders=(Just ["Access-Control-Allow-Origin"]), corsMaxAge=(Just 1000), corsVaryOrigin=True, corsRequireOrigin=False, corsIgnoreFailures=True })
     _ -> Nothing
   where
     hdrOrigin = lookup "origin" (requestHeaders req)
@@ -113,19 +112,15 @@ removeHost cfg x = replace ((host cfg) ++ ":" ++ (show.port $ cfg)) "uploads" x
 getConfig :: IO (Either String Config)
 getConfig = eitherDecode <$> B.readFile "config.json"
 
-checkKey :: String -> Request -> Bool
-checkKey k req = maybe False (== k) reqKey
-  where reqKey = fmap BS.unpack $ lookup "Authorization" (requestHeaders req)
-
-keyAuth :: String -> Application -> Request -> IO Response
-keyAuth k app req = if ((requestMethod req) == methodOptions) || checkKey k req then app req else return $ responseLBS status401 [] ""
+-- checkKey :: String -> Request -> Bool
+-- checkKey k req = maybe False (== k) reqKey
+--   where reqKey = fmap BS.unpack $ lookup "Authorization" (requestHeaders req)
 
 startApp :: Config -> IO ()
 startApp cfg = do
    scotty (port cfg) $ do
       middleware logStdoutDev
       middleware $ staticPolicy (addBase "uploads")
---      middleware $ keyAuth (key cfg)
       middleware $ cors getCorsPolicy
 
       post "/upload" $ do
