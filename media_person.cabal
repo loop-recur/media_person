@@ -1,7 +1,7 @@
 name:                MediaPerson
 version:             0.0.1
 synopsis:            Media server
-homepage:            https://github.com/yourName/repoName
+homepage:            https://github.com/looprecur/media_person
 license:             MIT
 author:              Brian Lonsdorf
 maintainer:          you@email.com
@@ -36,4 +36,5 @@ executable todo
                      , split
                      , directory
                      , containers
+                     , jobqueue
   ghc-options:       -Wall -W -Werror -O2
