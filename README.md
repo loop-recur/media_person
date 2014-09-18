@@ -21,7 +21,8 @@ is a hackage candidate at the time of this writing so it must be
 pulled as a git submodule. Do the following
 
 ```sh
-git submodule update --recursive
+git submodule update --init
+cabal sandbox add-source haskell-jobqueue/jobqueue
 ```
 
 Now let's build media person.
