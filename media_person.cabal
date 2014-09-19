@@ -1,40 +1,30 @@
-name:                MediaPerson
-version:             0.0.1
-synopsis:            Media server
-homepage:            https://github.com/looprecur/media_person
-license:             MIT
-author:              Brian Lonsdorf
-maintainer:          you@email.com
-category:            Web
-build-type:          Simple
-cabal-version:       >=1.8
+name:             MediaPerson
+version:          0.0.1
+synopsis:         Media server
+homepage:         https://github.com/looprecur/media_person
+license:          MIT
+author:           Brian Lonsdorf
+maintainer:       you@email.com
+category:         Web
+build-type:       Simple
+cabal-version:    >=1.8
 
-executable todo
-  main-is:             main.hs
-  -- other-modules:
-  build-depends:       base
-                     , wai
-                     , warp
-                     , http-types
-                     , resourcet
-                     , scotty
-                     , text
-                     , aeson
-                     , bytestring
-                     , monad-logger
-                     , transformers
-                     , wai-middleware-static
-                     , wai-extra
-                     , wai-cors
-                     , time
-                     , random
-                     , filepath
-                     , process
-                     , regex-compat
-                     , unordered-containers
-                     , MissingH
-                     , split
-                     , directory
-                     , containers
-                     , jobqueue
-  ghc-options:       -Wall -W -Werror -O2
+executable media_person
+  main-is:        Main.hs
+  build-depends:  base
+                , wai                   , warp         , http-types
+                , scotty                , text         , aeson
+                , bytestring            , monad-logger , transformers
+                , wai-middleware-static , wai-extra    , wai-cors
+                , time                  , random       , filepath
+                , process               , regex-compat , unordered-containers
+                , MissingH              , split        , directory
+                , containers            , jobqueue     , resourcet
+                , url                   , regex-base   , regex-tdfa
+                , safe
+  other-modules:  FileUtils
+                , MediaConversion
+                , ServerUtils
+  ghc-options:    -Wall -W -Werror -O2
+  hs-source-dirs: src
+  extensions:     OverloadedStrings, RankNTypes, DeriveGeneric, LambdaCase
