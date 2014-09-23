@@ -3,7 +3,8 @@ module MediaConversion where
 import Data.Map.Strict (Map, fromList, (!))
 
 import System.FilePath (replaceExtension, takeExtension)
-import System.Process (callProcess)
+import System.Process (callProcess, readProcessWithExitCode)
+import System.Exit
 
 type VideoFormat = String
 
@@ -35,5 +36,9 @@ videoScreenshot input output =
   callProcess "ffmpeg" ["-i", input, "-vframes","1","-f","image2","-an", output]
 --  let dest = replaceExtension ".jpg" input
 
-convertImage :: [String] -> FilePath -> FilePath -> IO ()
-convertImage params input output = callProcess "convert" $ [input] ++ params ++ [output]
+convertImage :: [String] -> FilePath -> FilePath -> IO(Either String FilePath)
+convertImage params input output = do
+  (code, _, e) <- readProcessWithExitCode "convert" ([input] ++ params ++ [output]) ""
+  case code of
+    ExitSuccess -> return $ Right output
+    ExitFailure _ -> return $ Left e
