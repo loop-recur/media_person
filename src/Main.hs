@@ -15,7 +15,7 @@ import System.FilePath (makeRelative)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
 
-import Network.HTTP.Types.Status (badRequest400, created201, notFound404)
+import Network.HTTP.Types.Status (badRequest400, created201, notFound404, badRequest400)
 import Network.Wai.Middleware.RequestLogger
 import Network.Wai.Middleware.Static
 import Network.Wai.Middleware.Cors (cors)
@@ -67,13 +67,20 @@ startApp cfg =
           let name = makeRelative uploadLocation path
           output <- liftIO $ uniqueAssetName name
           cmds   <- map unpack <$> splitOn "," <$> param "command"
-          liftIO $ convertImage cmds path output
+          result <- liftIO $ convertImage cmds path output
 
-          status created201
-          setHeader "Location" $ pack output
+          case result of
+            Right _ -> do
+              status created201
+              setHeader "Location" $ pack output
+            Left message -> do
+              status badRequest400
+              jsonError message
         else do
           status notFound404
           jsonError $ "image not found for conversion: " ++ url
+
+    -- post "/compressions" $ do
 
     -- post "/compress" $ do
     --   command <- param "command"
