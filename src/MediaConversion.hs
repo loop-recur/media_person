@@ -35,5 +35,5 @@ videoScreenshot input output =
   callProcess "ffmpeg" ["-i", input, "-vframes","1","-f","image2","-an", output]
 --  let dest = replaceExtension ".jpg" input
 
-cropImage :: [String] -> FilePath -> FilePath -> IO ()
-cropImage params input output = callProcess "convert" $ [input] ++ params ++ [output]
+convertImage :: [String] -> FilePath -> FilePath -> IO ()
+convertImage params input output = callProcess "convert" $ [input] ++ params ++ [output]
