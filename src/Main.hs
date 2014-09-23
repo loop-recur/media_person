@@ -1,26 +1,35 @@
 import Web.Scotty
 
-import Control.Applicative((<$>))
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad (zipWithM)
+import Control.Applicative ((<$>))
 
-import FileUtils (uploadLocation, uniqueUploadName)
+import FileUtils (uploadLocation, uniqueAssetName, localPath)
 import ServerUtils (Config(..), getConfig, getCorsPolicy)
---import MediaConversion
+import MediaConversion (convertImage)
 
 import Data.Aeson (object, (.=))
---import Network.JobQueue hiding (param)
+import Data.Text.Lazy (unpack, pack, splitOn)
+import Data.Maybe (fromMaybe)
+import System.Directory (createDirectoryIfMissing, doesFileExist)
+import System.FilePath (makeRelative)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
 
+import Network.HTTP.Types.Status (badRequest400, created201, notFound404)
 import Network.Wai.Middleware.RequestLogger
 import Network.Wai.Middleware.Static
 import Network.Wai.Middleware.Cors (cors)
 import Network.Wai.Parse (FileInfo(..))
 
+import Network.URL (importURL)
 
-main :: IO()
-main = either putStrLn startApp =<< getConfig
+main :: IO ()
+main = do
+  createDirectoryIfMissing False uploadLocation
+  either putStrLn startApp =<< getConfig
+
+jsonError :: String -> ActionM ()
+jsonError err = json $ object ["error" .= err]
 
 startApp :: Config -> IO ()
 startApp cfg =
@@ -29,48 +38,45 @@ startApp cfg =
     middleware $ staticPolicy (addBase uploadLocation)
     middleware $ cors getCorsPolicy
 
-    post "/upload" $ do
-      fileInfos <- map snd <$> files
-      let fileNames = map (BS.unpack . fileName) fileInfos
-      let fileContents = map fileContent fileInfos
-      uniqueNames <- liftIO . sequence $ map uniqueUploadName fileNames
 
-      _ <- liftIO $ zipWithM BL.writeFile uniqueNames fileContents
+    post "/uploads" $ do
+      fs <- files
 
-      json $ object ["success" .= True, "url" .= uploadLocation ]
+      case fs of
+        [f] -> do
+          let info = snd f
+          let name = BS.unpack $ fileName info
+          let content = fileContent info
+          uniqueName <- liftIO $ uniqueAssetName name
 
-      -- xs <- traverse (liftIO . saveFile . fileToTuple) =<< files
-      -- let res = T.pack . intercalate "," . map (addHost cfg) $ xs
-      -- setHeader "Location" res
+          _ <- liftIO $ BL.writeFile uniqueName content
+          status created201
+          setHeader "Location" $ pack uniqueName
+        _ -> do
+          status badRequest400
+          jsonError "requires exactly one file in post"
 
-    -- post "/crop" $ do
-    --   command <- splitOn "," $ param "command"
-    --   url <- param "url"
-    --   res <- liftIO $ cropImage command (removeHost cfg url)
-    --   succeedWithLocation res
+
+    post "/conversions" $ do
+      url      <- param "url"
+      let path = fromMaybe "" $ localPath <$> importURL url
+
+      present <- liftIO $ doesFileExist path
+      if present
+        then do
+          let name = makeRelative uploadLocation path
+          output <- liftIO $ uniqueAssetName name
+          cmds   <- map unpack <$> splitOn "," <$> param "command"
+          liftIO $ convertImage cmds path output
+
+          status created201
+          setHeader "Location" $ pack output
+        else do
+          status notFound404
+          jsonError $ "image not found for conversion: " ++ url
 
     -- post "/compress" $ do
     --   command <- param "command"
     --   url <- param "url"
     --   res <- liftIO $ compressVideos command (removeHost cfg url)
     --   succeedWithLocation res
-
-  -- where
-    -- succeedWithLocation path = do
-    --   let newUrl = addHost cfg path
-    --   setHeader "Location" $ T.pack newUrl
-    --   json $ object ["success" .= True, "url" .= newUrl ]
-
--- fileToTuple :: forall t t1. (t, FileInfo t1) -> (String, t1)
--- fileToTuple (_, fi) = (BS.unpack (fileName fi), fileContent fi)
-
--- compressVideos :: String -> FilePath -> IO FilePath
--- compressVideos command input_file = do
-  -- mapM_ (compressVideo input_file) . splitOn "," $ command
-  -- return input_file
-
--- saveFile :: (FilePath, B.ByteString) -> IO FilePath
--- saveFile (fn, fc) = do
-  -- folder <- fmap (</>fn) generateFolder
-  -- _ <- B.writeFile folder fc
-  -- if isVideo fn then getScreenshot folder else return folder
