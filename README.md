@@ -1,6 +1,6 @@
 ## Media person
 
-Haskell media server that crops
+Media server that saves and converts images and videos.
 
 ### API
 
@@ -42,31 +42,52 @@ Use post format `x-www-form-urlencoded` with parameters:
 
 Responds with HTTP 201 and `Location` header with url of the asset.
 
+#### POST /compressions
+
+Use post format `x-www-form-urlencoded` with parameters:
+
+<table>
+<thead>
+  <tr>
+    <th>Param</th>
+    <th>Meaning</th>
+    <th>Examples</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>url</td>
+    <td>path to the video to compress</td>
+    <td>/foo123.mov</td>
+  </tr>
+  <tr>
+    <td>targetFormat</td>
+    <td>The target format, duh</td>
+    <td>One of "h264" or "ogg"</td>
+  </tr>
+</tbody>
+</table>
+
+Responds with HTTP 201 and `Location` header with url of the asset.
+However the actual compression is added to a job queue and may take
+a while. Poll the created resource to know when it is complete.
+
 ### Building on os x
 
-Although this project uses sqlite to hold its job queue,
-the haskell library involved requires the zookeeper C bindings
-to build. So we'll install those first.
-
-Download the [zookeeper source](http://www.motorlogy.com/apache/zookeeper/stable/zookeeper-3.4.6.tar.gz) and untar it.
+Image conversion relies on ImageMagick's `convert` command, and video
+compression relies on `ffmpeg`. You'll need to install them to run
+the server locally.
 
 ```sh
-cd zookeeper-3.4.6/src/c
-./configure
-make && make install
+brew install imagemagick --build-from-source
+brew install ffmpeg --with-theora
 ```
 
-Now clone the media person repo. The job queue haskell package
-is a hackage candidate at the time of this writing so it must be
-pulled as a git submodule. Do the following
+Then the haskelly goodness.
 
 ```sh
-git submodule update --init
-cabal sandbox add-source haskell-jobqueue/jobqueue
-```
+cabal sandbox init
+cabal install -j --reorder-goals --disable-documentation
 
-Now let's build media person.
-
-```sh
-cabal install -j --reorder-goals --disable-documentation --enable-test --extra-include-dirs=/usr/local/include/zookeeper
+cabal run
 ```

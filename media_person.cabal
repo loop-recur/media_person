@@ -21,7 +21,7 @@ executable media_person
                 , MissingH              , split        , directory
                 , containers            , jobqueue     , resourcet
                 , url                   , regex-base   , regex-tdfa
-                , safe                  , HTTP
+                , safe                  , HTTP         , stm
   other-modules:  FileUtils
                 , MediaConversion
                 , ServerUtils
