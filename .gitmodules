@@ -1,3 +1,0 @@
-[submodule "haskell-jobqueue"]
-	path = haskell-jobqueue
-	url = https://github.com/gree/haskell-jobqueue.git

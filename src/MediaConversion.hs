@@ -1,6 +1,6 @@
 module MediaConversion where
 
-import Data.Map.Strict (Map, fromList, (!))
+import Data.Map.Strict (Map, fromList)
 
 import System.FilePath (replaceExtension, takeExtension)
 import System.Process (callProcess, readProcessWithExitCode)
@@ -15,8 +15,8 @@ data ConversionOpts = ConversionOpts {
 
 conversions :: Map VideoFormat ConversionOpts
 conversions = fromList [
-    ("h264", ConversionOpts ["-vcodec","libx264","-preset","fast","-crf","22"]              ".mp4" )
-  , ("ogg",  ConversionOpts ["-c:v","libtheora","-c:a","libvorbis","-q:v","10","-q:a","10"] ".ogv" )
+    ("h264", ConversionOpts ["-y","-vcodec","libx264","-preset","fast","-crf","22"]              ".mp4" )
+  , ("ogg",  ConversionOpts ["-y","-c:v","libtheora","-c:a","libvorbis","-q:v","10","-q:a","10"] ".ogv" )
   ]
 
 isVideo :: FilePath -> Bool
@@ -27,9 +27,9 @@ isVideo = flip elem videoExtensions . takeExtension
 convertedName :: ConversionOpts -> FilePath -> FilePath
 convertedName = flip replaceExtension . convExtension
 
-compressVideo :: VideoFormat -> FilePath -> FilePath -> IO ()
-compressVideo fmt input output = callProcess "ffmpeg" $ ["-i", input] ++ convOpts conv ++ [output]
-  where conv = conversions ! fmt :: ConversionOpts
+compressVideo :: ConversionOpts -> FilePath -> FilePath -> IO ()
+compressVideo conv input output =
+  callProcess "ffmpeg" $ ["-i", input] ++ convOpts conv ++ [output]
 
 videoScreenshot :: FilePath -> FilePath -> IO ()
 videoScreenshot input output =
