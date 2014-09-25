@@ -19,7 +19,7 @@ executable media_person
                 , time                  , random       , filepath
                 , process               , regex-compat , unordered-containers
                 , MissingH              , split        , directory
-                , containers            , jobqueue     , resourcet
+                , containers            , resourcet
                 , url                   , regex-base   , regex-tdfa
                 , safe                  , HTTP         , stm
   other-modules:  FileUtils
