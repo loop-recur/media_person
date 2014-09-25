@@ -17,6 +17,7 @@ conversions :: Map VideoFormat ConversionOpts
 conversions = fromList [
     ("h264", ConversionOpts ["-y","-vcodec","libx264","-preset","fast","-crf","22"]              ".mp4" )
   , ("ogg",  ConversionOpts ["-y","-c:v","libtheora","-c:a","libvorbis","-q:v","10","-q:a","10"] ".ogv" )
+  , ("jpeg", ConversionOpts ["-y","-vframes","1","-f","image2","-an"] ".jpg" )
   ]
 
 isVideo :: FilePath -> Bool
@@ -30,11 +31,6 @@ convertedName = flip replaceExtension . convExtension
 compressVideo :: ConversionOpts -> FilePath -> FilePath -> IO ()
 compressVideo conv input output =
   callProcess "ffmpeg" $ ["-i", input] ++ convOpts conv ++ [output]
-
-videoScreenshot :: FilePath -> FilePath -> IO ()
-videoScreenshot input output =
-  callProcess "ffmpeg" ["-i", input, "-vframes","1","-f","image2","-an", output]
---  let dest = replaceExtension ".jpg" input
 
 convertImage :: [String] -> FilePath -> FilePath -> IO(Either String FilePath)
 convertImage params input output = do
