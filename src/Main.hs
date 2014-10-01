@@ -4,7 +4,7 @@ import Control.Monad (forever)
 import Control.Monad.IO.Class (liftIO)
 import Control.Applicative ((<$>))
 
-import FileUtils (uploadLocation, uniqueAssetName, localPath)
+import FileUtils (uploadLocation, uniqueAssetName, localPath, publicUrl)
 import ServerUtils (Config(..), getConfig, getCorsPolicy)
 import MediaConversion
   (convertImage, conversions, compressVideo, convertedName,
@@ -29,7 +29,7 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.STM (STM, atomically)
 import Control.Concurrent.STM.TChan
 
-import Network.URL (importURL)
+import Network.URL (importURL, exportURL)
 
 main :: IO ()
 main = do
@@ -75,7 +75,7 @@ startApp cfg = do
 
           _ <- liftIO $ BL.writeFile uniqueName content
           status created201
-          setHeader "Location" $ pack uniqueName
+          setHeader "Location" $ pack $ exportURL (publicUrl uniqueName)
         _ -> do
           status badRequest400
           jsonError "requires exactly one file in post"
@@ -96,7 +96,7 @@ startApp cfg = do
           case result of
             Right _ -> do
               status created201
-              setHeader "Location" $ pack output
+              setHeader "Location" $ pack $ exportURL (publicUrl output)
             Left message -> do
               status badRequest400
               jsonError message
@@ -124,7 +124,7 @@ startApp cfg = do
                 putStrLn $ "Queuing video job " ++ show job
                 atomically $ writeTChan videoQueue job
               status accepted202
-              setHeader "Location" $ pack output
+              setHeader "Location" $ pack $ exportURL (publicUrl output)
             else do
               status notFound404
               jsonError $ "video not found for compression: " ++ url
