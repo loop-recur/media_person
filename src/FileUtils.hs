@@ -26,4 +26,4 @@ publicUrl file = URL HostRelative (makeRelative uploadLocation file) []
 --
 -- > publicUrl "http://me.com/foo.bar" == "uploads/foo.bar"
 localPath :: URL -> FilePath
-localPath = (uploadLocation </>) . url_path
+localPath = (uploadLocation </>) . makeRelative "/" . url_path
