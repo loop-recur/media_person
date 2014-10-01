@@ -1,5 +1,5 @@
 name:             MediaPerson
-version:          0.0.2
+version:          0.0.3
 synopsis:         Media server
 homepage:         https://github.com/looprecur/media_person
 license:          MIT
@@ -25,6 +25,6 @@ executable media_person
   other-modules:  FileUtils
                 , MediaConversion
                 , ServerUtils
-  ghc-options:    -Wall -W -Werror -O2
+  ghc-options:    -Wall -W -Werror -O2 -threaded
   hs-source-dirs: src
   extensions:     OverloadedStrings, RankNTypes, DeriveGeneric, LambdaCase
