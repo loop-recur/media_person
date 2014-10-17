@@ -74,6 +74,18 @@ a while. Poll the created resource to know when it is complete.
 
 ### Building on os x
 
+Although this project uses sqlite to hold its job queue,
+the haskell library involved requires the zookeeper C bindings
+to build. So we'll install those first.
+
+Download the [zookeeper source](http://www.motorlogy.com/apache/zookeeper/stable/zookeeper-3.4.6.tar.gz) and untar it.
+
+```sh
+cd zookeeper-3.4.6/src/c
+./configure
+make && make install
+```
+
 Image conversion relies on ImageMagick's `convert` command, and video
 compression relies on `ffmpeg`. You'll need to install them to run
 the server locally.
@@ -90,4 +102,10 @@ cabal sandbox init
 cabal install -j --reorder-goals --disable-documentation
 
 cabal run
+```
+
+Now let's build media person.
+
+```sh
+cabal install -j --reorder-goals --disable-documentation --enable-test --extra-include-dirs=/usr/local/include/zookeeper
 ```

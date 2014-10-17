@@ -11,6 +11,7 @@ cabal-version:    >=1.8
 
 executable media_person
   main-is:        Main.hs
+  ghc-options:    -Wall -W -Werror -O2 -threaded
   build-depends:  base
                 , wai                   , warp         , http-types
                 , scotty                , text         , aeson
@@ -19,12 +20,11 @@ executable media_person
                 , time                  , random       , filepath
                 , process               , regex-compat , unordered-containers
                 , MissingH              , split        , directory
-                , containers            , resourcet
+                , containers            , resourcet    , jobqueue
                 , url                   , regex-base   , regex-tdfa
                 , safe                  , HTTP         , stm
   other-modules:  FileUtils
                 , MediaConversion
                 , ServerUtils
-  ghc-options:    -Wall -W -Werror -O2 -threaded
   hs-source-dirs: src
   extensions:     OverloadedStrings, RankNTypes, DeriveGeneric, LambdaCase

@@ -1,5 +1,6 @@
 import Web.Scotty
 
+-- imports {{{
 import Control.Monad (forever)
 import Control.Monad.IO.Class (liftIO)
 import Control.Applicative ((<$>))
@@ -26,36 +27,55 @@ import Network.Wai.Middleware.Cors (cors)
 import Network.Wai.Parse (FileInfo(..))
 
 import Control.Concurrent (forkIO)
-import Control.Concurrent.STM (STM, atomically)
-import Control.Concurrent.STM.TChan
 
 import Network.URL (importURL, exportURL)
+import Network.JobQueue (buildJobQueue, process, executeJob, scheduleJob, Env, Aux, Desc, commitIO, JobQueue)
+import Network.JobQueue.Job (Unit(..))
+import qualified Network.JobQueue.Types as NJT
+
+import Control.Concurrent (threadDelay)
+
+--- }}}
+
+data CompressionUnit = CompressionUnit {
+  cuInput :: FilePath
+, cuOutput :: FilePath
+, cuConversion :: ConversionOpts
+} deriving (Show, Read, Eq, Ord)
+
+instance Desc CompressionUnit
+instance Unit CompressionUnit
+
+data JobEnv = JobEnv deriving (Eq, Show)
+
+instance Env JobEnv where
+instance Aux JobEnv where
 
 main :: IO ()
 main = do
   createDirectoryIfMissing False uploadLocation
   either putStrLn startApp =<< getConfig
 
+
 jsonError :: String -> ActionM ()
 jsonError err = json $ object ["error" .= err]
 
-data VideoJob = VideoJob {
-  vjInput :: FilePath
-, vjOutput :: FilePath
-, vjConversion :: ConversionOpts
-} deriving Show
 
-videoWorker :: TChan VideoJob -> IO ()
-videoWorker c = forever $ do
-  job <- atomically $ readTChan c
+videoWorker :: (Env e, Unit a) => CompressionUnit -> NJT.ActionM e a ()
+videoWorker job = commitIO $ do
   putStrLn $ "Running job " ++ show job
-  compressVideo (vjConversion job) (vjInput job) (vjOutput job)
+  compressVideo (cuConversion job) (cuInput job) (cuOutput job)
 
 
 startApp :: Config -> IO ()
 startApp cfg = do
-  videoQueue <- liftIO $ atomically (newTChan :: STM (TChan VideoJob))
-  _ <- forkIO $ videoWorker videoQueue
+  let withVideoQueue :: (JobQueue JobEnv CompressionUnit -> IO ()) -> IO ()
+      withVideoQueue = buildJobQueue
+        "sqlite3://media_person.sqlite3" "compress" $ process videoWorker
+
+  _ <- forkIO $ forever $ do
+    threadDelay 2000000 -- 2 seconds
+    withVideoQueue $ flip executeJob JobEnv
 
   scotty (port cfg) $ do
     middleware logStdoutDev
@@ -119,10 +139,12 @@ startApp cfg = do
               let name = makeRelative uploadLocation path
               output <- liftIO $
                 uniqueAssetName $ convertedName opt name
-              let job = VideoJob path output opt
-              liftIO $ do
+
+              _ <- liftIO $ do
+                let job = CompressionUnit path output opt
                 putStrLn $ "Queuing video job " ++ show job
-                atomically $ writeTChan videoQueue job
+                withVideoQueue $ flip scheduleJob job
+
               status accepted202
               setHeader "Location" $ pack $ exportURL (publicUrl output)
             else do

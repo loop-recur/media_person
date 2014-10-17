@@ -11,7 +11,7 @@ type VideoFormat = String
 data ConversionOpts = ConversionOpts {
   convOpts      :: [String]
 , convExtension :: String
-} deriving (Eq, Show)
+} deriving (Show, Read, Eq, Ord)
 
 conversions :: Map VideoFormat ConversionOpts
 conversions = fromList [
