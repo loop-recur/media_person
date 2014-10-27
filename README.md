@@ -12,7 +12,12 @@ Example
 curl -i -X POST -F img=@/path/to/image.jpg localhost:5050/uploads
 ```
 
-Responds with HTTP 201 and `Location` header with url of the asset.
+Responds with HTTP 201 and `Location` header with url of the asset. For
+[Fine Uploader](http://fineuploader.com/) support, specify
+
+```http
+Accept: text/vnd.fineuploader+plain
+```
 
 #### POST /conversions
 

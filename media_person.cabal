@@ -1,5 +1,5 @@
 name:             MediaPerson
-version:          0.0.3
+version:          0.0.4
 synopsis:         Media server
 homepage:         https://github.com/looprecur/media_person
 license:          MIT
@@ -23,6 +23,7 @@ executable media_person
                 , containers            , resourcet    , jobqueue
                 , url                   , regex-base   , regex-tdfa
                 , safe                  , HTTP         , stm
+                , string-conversions
   other-modules:  FileUtils
                 , MediaConversion
                 , ServerUtils

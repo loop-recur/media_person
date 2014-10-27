@@ -2,6 +2,7 @@ dist/
 *.hi
 *.o
 *.swp
+*.sqlite3
 uploads/
 config.json
 cabal-dev/

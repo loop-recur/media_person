@@ -1,7 +1,10 @@
 import Web.Scotty
 
 -- imports {{{
-import Control.Monad (forever)
+
+import Paths_MediaPerson (version)
+
+import Control.Monad (forever, when)
 import Control.Monad.IO.Class (liftIO)
 import Control.Applicative ((<$>))
 
@@ -12,13 +15,14 @@ import MediaConversion
    ConversionOpts(..))
 
 import Data.Aeson (object, (.=))
-import Data.Text.Lazy (unpack, pack, splitOn)
+import Data.Text.Lazy (splitOn)
 import Data.Maybe (fromMaybe)
+import Data.List (intercalate)
 import qualified Data.Map.Strict as M
 import System.Directory (createDirectoryIfMissing, doesFileExist)
 import System.FilePath (makeRelative)
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BL
+import Data.Monoid ( (<>) )
 
 import Network.HTTP.Types.Status (badRequest400, created201, notFound404, badRequest400, accepted202)
 import Network.Wai.Middleware.RequestLogger
@@ -26,14 +30,17 @@ import Network.Wai.Middleware.Static
 import Network.Wai.Middleware.Cors (cors)
 import Network.Wai.Parse (FileInfo(..))
 
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkIO, threadDelay)
 
 import Network.URL (importURL, exportURL)
 import Network.JobQueue (buildJobQueue, process, executeJob, scheduleJob, Env, Aux, Desc, commitIO, JobQueue)
 import Network.JobQueue.Job (Unit(..))
 import qualified Network.JobQueue.Types as NJT
 
-import Control.Concurrent (threadDelay)
+import qualified Network.Wai.Handler.Warp as Warp
+
+import Data.String.Conversions (cs)
+import Data.Version (Version(..))
 
 --- }}}
 
@@ -50,6 +57,9 @@ data JobEnv = JobEnv deriving (Eq, Show)
 
 instance Env JobEnv where
 instance Aux JobEnv where
+
+prettyVersion :: String
+prettyVersion = intercalate "." $ map show $ versionBranch version
 
 main :: IO ()
 main = do
@@ -77,11 +87,15 @@ startApp cfg = do
     threadDelay 2000000 -- 2 seconds
     withVideoQueue $ flip executeJob JobEnv
 
-  scotty (port cfg) $ do
+
+  let opts = Warp.setServerName (cs $ "MediaPerson/" <> prettyVersion)
+               . Warp.setPort (port cfg)
+               $ Warp.defaultSettings
+
+  scottyOpts (Options 1 opts) $ do
     middleware logStdoutDev
     middleware $ staticPolicy (addBase uploadLocation)
     middleware $ cors getCorsPolicy
-
 
     post "/uploads" $ do
       fs <- files
@@ -89,13 +103,25 @@ startApp cfg = do
       case fs of
         [f] -> do
           let info = snd f
-          let name = BS.unpack $ fileName info
+          let name = cs $ fileName info
           let content = fileContent info
           uniqueName <- liftIO $ uniqueAssetName name
 
           _ <- liftIO $ BL.writeFile uniqueName content
           status created201
-          setHeader "Location" $ pack $ exportURL (publicUrl uniqueName)
+
+          let public = exportURL (publicUrl uniqueName)
+          setHeader "Location" $ cs public
+
+          accept <- header "Accept"
+          when (accept == Just "text/vnd.fineuploader+plain") $ do
+            json $ object [
+                "success" .= True
+              , "location" .= public
+              , "contentType" .= ((cs $ fileContentType info) :: String)
+              ]
+            setHeader "Content-Type" "text/plain"
+
         _ -> do
           status badRequest400
           jsonError "requires exactly one file in post"
@@ -110,13 +136,13 @@ startApp cfg = do
         then do
           let name = makeRelative uploadLocation path
           output <- liftIO $ uniqueAssetName name
-          cmds   <- map unpack <$> splitOn "," <$> param "command"
+          cmds   <- map cs <$> splitOn "," <$> param "command"
           result <- liftIO $ convertImage cmds path output
 
           case result of
             Right _ -> do
               status created201
-              setHeader "Location" $ pack $ exportURL (publicUrl output)
+              setHeader "Location" $ cs $ exportURL (publicUrl output)
             Left message -> do
               status badRequest400
               jsonError message
@@ -146,7 +172,7 @@ startApp cfg = do
                 withVideoQueue $ flip scheduleJob job
 
               status accepted202
-              setHeader "Location" $ pack $ exportURL (publicUrl output)
+              setHeader "Location" $ cs $ exportURL (publicUrl output)
             else do
               status notFound404
               jsonError $ "video not found for compression: " ++ url
