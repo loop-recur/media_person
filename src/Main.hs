@@ -10,9 +10,9 @@ import Control.Applicative ((<$>))
 
 import FileUtils (uploadLocation, uniqueAssetName, localPath, publicUrl)
 import ServerUtils (Config(..), getConfig, getCorsPolicy)
-import MediaConversion
-  (convertImage, conversions, compressVideo, convertedName,
-   ConversionOpts(..))
+import MediaConversion (
+  convertImage, conversions, compressVideo,
+  convertedName, screenshotConversion, ConversionOpts(..))
 
 import Data.Aeson (object, (.=))
 import Data.Text.Lazy (splitOn)
@@ -174,6 +174,13 @@ startApp cfg = do
 
               status accepted202
               setHeader "Location" $ cs $ exportURL (publicUrl output)
+
+              prefer <- header "Prefer"
+              when (prefer == Just "return=representation") $ do
+                screenshot <- liftIO $ uniqueAssetName $ convertedName screenshotConversion name
+                liftIO $ compressVideo screenshotConversion path screenshot
+                file screenshot
+                setHeader "Content-Type" "image/jpeg"
             else do
               status notFound404
               jsonError $ "video not found for compression: " ++ url

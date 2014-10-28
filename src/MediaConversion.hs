@@ -1,6 +1,7 @@
 module MediaConversion where
 
-import Data.Map.Strict (Map, fromList)
+import Prelude hiding (lookup)
+import Data.Map.Strict (Map, fromList, lookup)
 
 import System.FilePath (replaceExtension, takeExtension)
 import System.Process (callProcess, readProcessWithExitCode)
@@ -19,6 +20,9 @@ conversions = fromList [
   , ("ogg",  ConversionOpts ["-y","-c:v","libtheora","-c:a","libvorbis","-q:v","10","-q:a","10"] ".ogv" )
   , ("jpeg", ConversionOpts ["-y","-vframes","1","-f","image2","-an"] ".jpg" )
   ]
+
+screenshotConversion :: ConversionOpts
+Just screenshotConversion = lookup "jpeg" conversions
 
 isVideo :: FilePath -> Bool
 isVideo = flip elem videoExtensions . takeExtension

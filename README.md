@@ -77,6 +77,12 @@ Responds with HTTP 201 and `Location` header with url of the asset.
 However the actual compression is added to a job queue and may take
 a while. Poll the created resource to know when it is complete.
 
+To get a screenshot of the video to be converted, include the header
+
+```http
+Prefer: return=representation
+```
+
 ### Building on os x
 
 Although this project uses sqlite to hold its job queue,
