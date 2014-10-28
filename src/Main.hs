@@ -24,7 +24,7 @@ import System.FilePath (makeRelative)
 import qualified Data.ByteString.Lazy as BL
 import Data.Monoid ( (<>) )
 
-import Network.HTTP.Types.Status (badRequest400, created201, notFound404, badRequest400, accepted202)
+import Network.HTTP.Types.Status (badRequest400, ok200, created201, notFound404, badRequest400, accepted202)
 import Network.Wai.Middleware.RequestLogger
 import Network.Wai.Middleware.Static
 import Network.Wai.Middleware.Cors (cors)
@@ -115,6 +115,7 @@ startApp cfg = do
 
           accept <- header "Accept"
           when (accept == Just "text/vnd.fineuploader+plain") $ do
+            status ok200
             json $ object [
                 "success" .= True
               , "location" .= public
