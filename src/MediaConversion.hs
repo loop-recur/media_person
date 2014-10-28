@@ -1,7 +1,7 @@
 module MediaConversion where
 
 import Prelude hiding (lookup)
-import Data.Map.Strict (Map, fromList, lookup)
+import Data.Map.Strict (Map, fromList)
 
 import System.FilePath (replaceExtension, takeExtension)
 import System.Process (callProcess, readProcessWithExitCode)
@@ -12,17 +12,15 @@ type VideoFormat = String
 data ConversionOpts = ConversionOpts {
   convOpts      :: [String]
 , convExtension :: String
+, convAsync     :: Bool
 } deriving (Show, Read, Eq, Ord)
 
 conversions :: Map VideoFormat ConversionOpts
 conversions = fromList [
-    ("h264", ConversionOpts ["-y","-vcodec","libx264","-preset","fast","-crf","22"]              ".mp4" )
-  , ("ogg",  ConversionOpts ["-y","-c:v","libtheora","-c:a","libvorbis","-q:v","10","-q:a","10"] ".ogv" )
-  , ("jpeg", ConversionOpts ["-y","-vframes","1","-f","image2","-an"] ".jpg" )
+    ("h264", ConversionOpts ["-y","-vcodec","libx264","-preset","fast","-crf","22"] ".mp4" True )
+  , ("ogg",  ConversionOpts ["-y","-c:v","libtheora","-c:a","libvorbis","-q:v","10","-q:a","10"] ".ogv" True )
+  , ("jpeg", ConversionOpts ["-y","-vframes","1","-f","image2","-an"] ".jpg" False )
   ]
-
-screenshotConversion :: ConversionOpts
-Just screenshotConversion = lookup "jpeg" conversions
 
 isVideo :: FilePath -> Bool
 isVideo = flip elem videoExtensions . takeExtension

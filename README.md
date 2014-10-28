@@ -73,11 +73,15 @@ Use post format `x-www-form-urlencoded` with parameters:
 </tbody>
 </table>
 
-Responds with HTTP 201 and `Location` header with url of the asset.
-However the actual compression is added to a job queue and may take
-a while. Poll the created resource to know when it is complete.
+The choice of `targetFormat` changes the behavior of this operation.
+Converting to jpeg happens synchronously, and returns HTTP 201.
+Compressing to other video types happens asynchronously with HTTP
+202. This may take a while. Poll the created resource to know when
+it is complete. In either case the server will provide a `Location`
+header to the destination resource.
 
-To get a screenshot of the video to be converted, include the header
+When converting to jpeg you can set this header to get a copy of
+the screenshot returned in the same HTTP response.
 
 ```http
 Prefer: return=representation

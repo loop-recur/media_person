@@ -12,7 +12,7 @@ import FileUtils (uploadLocation, uniqueAssetName, localPath, publicUrl)
 import ServerUtils (Config(..), getConfig, getCorsPolicy)
 import MediaConversion (
   convertImage, conversions, compressVideo,
-  convertedName, screenshotConversion, ConversionOpts(..))
+  convertedName, ConversionOpts(..))
 
 import Data.Aeson (object, (.=))
 import Data.Text.Lazy (splitOn)
@@ -167,20 +167,23 @@ startApp cfg = do
               output <- liftIO $
                 uniqueAssetName $ convertedName opt name
 
-              _ <- liftIO $ do
-                let job = CompressionUnit path output opt
-                putStrLn $ "Queuing video job " ++ show job
-                withVideoQueue $ flip scheduleJob job
+              if convAsync opt
+                then do
+                  _ <- liftIO $ do
+                    let job = CompressionUnit path output opt
+                    putStrLn $ "Queuing video job " ++ show job
+                    withVideoQueue $ flip scheduleJob job
 
-              status accepted202
+                  status accepted202
+                else do
+                  liftIO $ compressVideo opt path output
+                  status created201
+                  prefer <- header "Prefer"
+                  when (prefer == Just "return=representation") $ do
+                    setHeader "Content-Type" "image/jpeg"
+                    file output
+
               setHeader "Location" $ cs $ exportURL (publicUrl output)
-
-              prefer <- header "Prefer"
-              when (prefer == Just "return=representation") $ do
-                screenshot <- liftIO $ uniqueAssetName $ convertedName screenshotConversion name
-                liftIO $ compressVideo screenshotConversion path screenshot
-                file screenshot
-                setHeader "Content-Type" "image/jpeg"
             else do
               status notFound404
               jsonError $ "video not found for compression: " ++ url
