@@ -20,7 +20,7 @@ import Data.Maybe (fromMaybe, isJust)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as M
 import System.Directory (createDirectoryIfMissing, doesFileExist)
-import System.FilePath (makeRelative)
+import System.FilePath (makeRelative, takeFileName, combine)
 import qualified Data.ByteString.Lazy as BL
 import Data.Monoid ( (<>) )
 
@@ -162,6 +162,8 @@ startApp cfg = do
       url <- param "url"
       fmt <- param "targetFormat"
       let path = fromMaybe "" $ localPath <$> importURL url
+      overrideName <- maybeParam "targetFilename"
+      let overridePath = combine uploadLocation . takeFileName . cs <$> overrideName
 
       let conversionOpt = M.lookup fmt conversions
       case conversionOpt of
@@ -170,8 +172,8 @@ startApp cfg = do
           if present
             then do
               let name = makeRelative uploadLocation path
-              output <- liftIO $
-                uniqueAssetName $ convertedName opt name
+              defaultName <- liftIO $ uniqueAssetName $ convertedName opt name
+              let output = fromMaybe defaultName overridePath
 
               if convAsync opt
                 then do

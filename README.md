@@ -76,6 +76,11 @@ Use post format `x-www-form-urlencoded` with parameters:
     <td>The target format, duh</td>
     <td>One of "h264", "ogg" (or "jpeg" for screenshot)</td>
   </tr>
+  <tr>
+    <td>targetFilename (optional)</td>
+    <td>Force the output name, not recommended</td>
+    <td>bla.ogv</td>
+  </tr>
 </tbody>
 </table>
 
