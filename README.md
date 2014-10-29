@@ -19,6 +19,12 @@ Responds with HTTP 201 and `Location` header with url of the asset. For
 Accept: text/vnd.fineuploader+plain
 ```
 
+Or if you're using an iframe for the upload, add a post parameter
+
+```http
+iframeRemote=true
+```
+
 #### POST /conversions
 
 Use post format `x-www-form-urlencoded` with parameters:

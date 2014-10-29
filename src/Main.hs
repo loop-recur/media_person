@@ -15,8 +15,8 @@ import MediaConversion (
   convertedName, ConversionOpts(..))
 
 import Data.Aeson (object, (.=))
-import Data.Text.Lazy (splitOn)
-import Data.Maybe (fromMaybe)
+import Data.Text.Lazy (splitOn, Text)
+import Data.Maybe (fromMaybe, isJust)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as M
 import System.Directory (createDirectoryIfMissing, doesFileExist)
@@ -77,6 +77,10 @@ videoWorker job = commitIO $ do
   compressVideo (cuConversion job) (cuInput job) (cuOutput job)
 
 
+maybeParam :: Text -> ActionM (Maybe Text)
+maybeParam p = M.lookup p . M.fromList <$> params
+
+
 startApp :: Config -> IO ()
 startApp cfg = do
   let withVideoQueue :: (JobQueue JobEnv CompressionUnit -> IO ()) -> IO ()
@@ -113,8 +117,10 @@ startApp cfg = do
           let public = exportURL (publicUrl uniqueName)
           setHeader "Location" $ cs public
 
-          accept <- header "Accept"
-          when (accept == Just "text/vnd.fineuploader+plain") $ do
+          accept       <- header "Accept"
+          iframeRemote <- maybeParam "iframeRemote"
+          when (isJust iframeRemote ||
+                accept == Just "text/vnd.fineuploader+plain") $ do
             status ok200
             json $ object [
                 "success" .= True
