@@ -20,7 +20,7 @@ import Data.Maybe (fromMaybe, isJust)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as M
 import System.Directory (createDirectoryIfMissing, doesFileExist)
-import System.FilePath (makeRelative, takeFileName, combine)
+import System.FilePath (makeRelative, takeFileName, combine, splitExtension)
 import qualified Data.ByteString.Lazy as BL
 import Data.Monoid ( (<>) )
 
@@ -41,6 +41,8 @@ import qualified Network.Wai.Handler.Warp as Warp
 
 import Data.String.Conversions (cs)
 import Data.Version (Version(..))
+
+import Text.Regex (subRegex, mkRegex)
 
 --- }}}
 
@@ -80,6 +82,12 @@ videoWorker job = commitIO $ do
 maybeParam :: Text -> ActionM (Maybe Text)
 maybeParam p = M.lookup p . M.fromList <$> params
 
+cleanFileName :: String -> String
+cleanFileName = sanitizeName . splitExtension
+  where
+   sanitizeName (x,y) = (clean x) ++  y
+   clean x = subRegex (mkRegex "\\W+") x "_"
+
 
 startApp :: Config -> IO ()
 startApp cfg = do
@@ -101,13 +109,14 @@ startApp cfg = do
     middleware $ staticPolicy (addBase uploadLocation)
     middleware $ cors getCorsPolicy
 
+
     post "/uploads" $ do
       fs <- files
 
       case fs of
         [f] -> do
           let info = snd f
-          let name = cs $ fileName info
+          let name = cleanFileName . cs . fileName $ info
           let content = fileContent info
           uniqueName <- liftIO $ uniqueAssetName name
 
