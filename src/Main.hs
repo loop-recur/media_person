@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 import Web.Scotty
 
 -- imports {{{
@@ -109,6 +111,9 @@ startApp cfg = do
     middleware $ staticPolicy (addBase uploadLocation)
     middleware $ cors getCorsPolicy
 
+    get "/download/:name" $ do
+      name <- param "name"
+      setHeader "Content-Disposition" ("attachment; filename=" <> name)
 
     post "/uploads" $ do
       fs <- files
